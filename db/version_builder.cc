@@ -774,6 +774,24 @@ class VersionBuilder::Rep {
       }
     }
 
+    //log wd_info for deleted files
+    for(const auto& del : edit->GetDeletedFilesMeta()){
+      int level = del.first;
+      uint64_t num = del.second.fd.GetNumber();
+      uint64_t create_time = del.second.wdInfo.create_time;
+      uint64_t delete_time = del.second.wdInfo.delete_time;
+      uint64_t real_lifetime = del.second.wdInfo.real_lifetime;
+      int write_hint = static_cast<int>(del.second.wdInfo.write_hint);
+      std::string info = std::to_string(level) + "  "
+      + std::to_string(num) + "  "
+      + std::to_string(real_lifetime) + "  "
+      + std::to_string(write_hint) + "  "
+      + std::to_string(create_time) + "  "
+      + std::to_string(delete_time) + "\n";
+      version_set_->wd_logger_->Append(Slice(info.data(),info.size()));
+      version_set_->wd_logger_->Flush();
+    }
+
     // Add new table files
     for (const auto& new_file : edit->GetNewFiles()) {
       const int level = new_file.first;

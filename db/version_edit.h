@@ -22,6 +22,7 @@
 #include "rocksdb/cache.h"
 #include "table/table_reader.h"
 #include "util/autovector.h"
+//#include "logging/env_logger.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -158,7 +159,15 @@ struct FileSampledStats {
   mutable std::atomic<uint64_t> num_reads_sampled;
 };
 
+struct wd_info{
+  uint64_t create_time;
+  uint64_t delete_time;
+  uint64_t real_lifetime;
+  Env::WriteLifeTimeHint write_hint;
+};
+
 struct FileMetaData {
+  struct wd_info wdInfo;
   FileDescriptor fd;
   InternalKey smallest;            // Smallest internal key served by table
   InternalKey largest;             // Largest internal key served by table
@@ -229,6 +238,30 @@ struct FileMetaData {
         file_checksum(_file_checksum),
         file_checksum_func_name(_file_checksum_func_name) {
     TEST_SYNC_POINT_CALLBACK("FileMetaData::FileMetaData", this);
+  }
+
+  FileMetaData(uint64_t file, uint32_t file_path_id, uint64_t file_size,
+               const InternalKey& smallest_key, const InternalKey& largest_key,
+               const SequenceNumber& smallest_seq,
+               const SequenceNumber& largest_seq, bool marked_for_compact,
+               uint64_t oldest_blob_file, uint64_t _oldest_ancester_time,
+               uint64_t _file_creation_time, const std::string& _file_checksum,
+               const std::string& _file_checksum_func_name,
+               struct wd_info wd)
+               : fd(file, file_path_id, file_size, smallest_seq, largest_seq),
+               smallest(smallest_key),
+               largest(largest_key),
+               marked_for_compaction(marked_for_compact),
+               oldest_blob_file_number(oldest_blob_file),
+               oldest_ancester_time(_oldest_ancester_time),
+               file_creation_time(_file_creation_time),
+               file_checksum(_file_checksum),
+               file_checksum_func_name(_file_checksum_func_name) {
+      wdInfo.write_hint = wd.write_hint;
+      wdInfo.create_time = wd.create_time;
+      wdInfo.delete_time = wd.delete_time;
+      wdInfo.real_lifetime = wd.real_lifetime;
+      TEST_SYNC_POINT_CALLBACK("FileMetaData::FileMetaData", this);
   }
 
   // REQUIRED: Keys must be given to the function in sorted order (it expects
@@ -379,9 +412,16 @@ class VersionEdit {
     deleted_files_.emplace(level, file);
   }
 
+  void DeleteFileMeta(int level, FileMetaData* f) {
+    deleted_files_meta_.emplace_back(level, *f);
+  }
+
   // Retrieve the table files deleted as well as their associated levels.
   using DeletedFiles = std::set<std::pair<int, uint64_t>>;
   const DeletedFiles& GetDeletedFiles() const { return deleted_files_; }
+
+  using DeletedFilesMeta = std::vector<std::pair<int, FileMetaData>>;
+  DeletedFilesMeta& GetDeletedFilesMeta() { return deleted_files_meta_; }
 
   // Add the specified table file at the specified level.
   // REQUIRES: This version has not been saved (see VersionSet::SaveTo)
@@ -402,6 +442,23 @@ class VersionEdit {
                             marked_for_compaction, oldest_blob_file_number,
                             oldest_ancester_time, file_creation_time,
                             file_checksum, file_checksum_func_name));
+  }
+
+  void AddFile(int level, uint64_t file, uint32_t file_path_id,
+               uint64_t file_size, const InternalKey& smallest,
+               const InternalKey& largest, const SequenceNumber& smallest_seqno,
+               const SequenceNumber& largest_seqno, bool marked_for_compaction,
+               uint64_t oldest_blob_file_number, uint64_t oldest_ancester_time,
+               uint64_t file_creation_time, const std::string& file_checksum,
+               const std::string& file_checksum_func_name,
+               struct wd_info wdInfo) {
+      assert(smallest_seqno <= largest_seqno);
+      new_files_.emplace_back(
+              level, FileMetaData(file, file_path_id, file_size, smallest, largest,
+                                  smallest_seqno, largest_seqno,
+                                  marked_for_compaction, oldest_blob_file_number,
+                                  oldest_ancester_time, file_creation_time,
+                                  file_checksum, file_checksum_func_name,wdInfo));
   }
 
   void AddFile(int level, const FileMetaData& f) {
@@ -585,6 +642,7 @@ class VersionEdit {
   bool has_min_log_number_to_keep_ = false;
   bool has_last_sequence_ = false;
 
+  DeletedFilesMeta deleted_files_meta_;
   DeletedFiles deleted_files_;
   NewFiles new_files_;
 

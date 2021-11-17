@@ -874,6 +874,7 @@ Status FlushJob::WriteLevel0Table() {
       meta_.oldest_ancester_time = oldest_ancester_time;
 
       meta_.file_creation_time = current_time;
+      meta_.wdInfo.create_time = clock_->NowMicros();
 
       uint64_t creation_time = (cfd_->ioptions()->compaction_style ==
                                 CompactionStyle::kCompactionStyleFIFO)
@@ -960,8 +961,8 @@ Status FlushJob::WriteLevel0Table() {
                    meta_.fd.smallest_seqno, meta_.fd.largest_seqno,
                    meta_.marked_for_compaction, meta_.oldest_blob_file_number,
                    meta_.oldest_ancester_time, meta_.file_creation_time,
-                   meta_.file_checksum, meta_.file_checksum_func_name);
-
+                   meta_.file_checksum, meta_.file_checksum_func_name,meta_.wdInfo);
+    //TODO() override AddFile with wdInfo
     edit_->SetBlobFileAdditions(std::move(blob_file_additions));
   }
 #ifndef ROCKSDB_LITE

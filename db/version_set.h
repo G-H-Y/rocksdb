@@ -19,6 +19,8 @@
 // synchronization on all accesses.
 
 #pragma once
+#include <logging/env_logger.h>
+
 #include <atomic>
 #include <deque>
 #include <limits>
@@ -53,6 +55,7 @@
 #include "table/get_context.h"
 #include "table/multiget_context.h"
 #include "trace_replay/block_cache_tracer.h"
+#include "logging/env_logger.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -1298,6 +1301,10 @@ class VersionSet {
     version->PrepareApply(mutable_cf_options, update_stats);
     AppendVersion(cfd, version);
   }
+
+  std::unique_ptr<WritableFileWriter> wd_logger_;
+
+  void SetWDLogger(std::unique_ptr<WritableFileWriter> log){ wd_logger_ = std::move(log); }
 
  protected:
   using VersionBuilderMap =

@@ -258,6 +258,7 @@ Status BuildTable(
       uint64_t file_size = builder->FileSize();
       meta->fd.file_size = file_size;
       meta->marked_for_compaction = builder->NeedCompact();
+      meta->wdInfo.write_hint = write_hint;
       assert(meta->fd.GetFileSize() > 0);
       tp = builder->GetTableProperties(); // refresh now that builder is finished
       if (memtable_payload_bytes != nullptr &&

@@ -6,6 +6,8 @@
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
+#include <logging/env_logger.h>
+
 #include <cinttypes>
 
 #include "db/builder.h"
@@ -24,6 +26,7 @@
 #include "rocksdb/wal_filter.h"
 #include "test_util/sync_point.h"
 #include "util/rate_limiter.h"
+#include "db/version_set.h"
 
 namespace ROCKSDB_NAMESPACE {
 Options SanitizeOptions(const std::string& dbname, const Options& src,
@@ -1518,6 +1521,17 @@ Status DB::Open(const Options& options, const std::string& dbname, DB** dbptr) {
     }
     delete handles[0];
   }
+  /*
+  if(s.ok()&&options.wd_log_){
+    WritableFile* log_f;
+    std::string f_name = dbname + "/WDLog_1";
+    s = options.env->NewWritableFile(f_name, &log_f);
+    if (s.ok()) {
+      StatLog* new_log = new StatLog(log_f);
+      impl->stat_log_.reset(new_log);
+    }
+  }
+  */
   return s;
 }
 
@@ -1881,6 +1895,20 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
     handles->clear();
     delete impl;
     *dbptr = nullptr;
+  }
+
+  if(s.ok()&&db_options.wd_log_){
+    uint64_t now_time = impl->env_->NowMicros();
+    std::string f_name = dbname + "/WDLog_" + std::to_string(now_time);
+    std::unique_ptr<WritableFileWriter> file_writer;
+    const auto& fs = impl->env_->GetFileSystem();
+    s = WritableFileWriter::Create(fs, f_name, db_options, &file_writer,nullptr);
+    if (s.ok()) {
+      std::string info = "level  number  real_lifetime  write_hint  create_time  delete_time\n";
+      file_writer->Append(Slice(info.data(),info.size()),0);
+      file_writer->Flush();
+      impl->versions_->SetWDLogger(std::move(file_writer));
+    }
   }
   return s;
 }

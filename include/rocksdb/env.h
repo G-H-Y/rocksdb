@@ -1800,7 +1800,6 @@ Env* NewTimedEnv(Env* base_env);
 // This is a factory method for EnvLogger declared in logging/env_logging.h
 Status NewEnvLogger(const std::string& fname, Env* env,
                     std::shared_ptr<Logger>* result);
-
 // Creates a new Env based on Env::Default() but modified to use the specified
 // FileSystem.
 std::unique_ptr<Env> NewCompositeEnv(const std::shared_ptr<FileSystem>& fs);

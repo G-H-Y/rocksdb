@@ -1906,6 +1906,21 @@ Status CompactionJob::InstallCompactionResults(
 
   std::unordered_map<uint64_t, BlobGarbageMeter::BlobStats> blob_total_garbage;
 
+  //add wd info to new created files
+  for (auto& sub_compact : compact_->sub_compact_states) {
+    for (auto& out : sub_compact.outputs) {
+      out.meta.wdInfo.write_hint = write_hint_;
+      out.meta.wdInfo.create_time = env_->NowMicros();
+    }
+  }
+  //get real life time of deleted files
+  for (auto& del : edit->GetDeletedFilesMeta()){
+    uint64_t create_time = del.second.wdInfo.create_time;
+    uint64_t delete_time = env_->NowMicros();
+    del.second.wdInfo.delete_time = delete_time;
+    del.second.wdInfo.real_lifetime = delete_time-create_time;
+  }
+  //Apply
   for (const auto& sub_compact : compact_->sub_compact_states) {
     for (const auto& out : sub_compact.outputs) {
       edit->AddFile(compaction->output_level(), out.meta);
