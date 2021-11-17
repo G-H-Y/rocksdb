@@ -1911,6 +1911,7 @@ Status CompactionJob::InstallCompactionResults(
     for (auto& out : sub_compact.outputs) {
       out.meta.wdInfo.write_hint = write_hint_;
       out.meta.wdInfo.create_time = env_->NowMicros();
+      out.meta.wdInfo.is_trivalmove = false;
     }
   }
   //get real life time of deleted files

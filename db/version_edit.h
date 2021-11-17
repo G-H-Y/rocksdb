@@ -164,6 +164,9 @@ struct wd_info{
   uint64_t delete_time;
   uint64_t real_lifetime;
   Env::WriteLifeTimeHint write_hint;
+  bool is_trivalmove;
+  int tm_from; //trival move from level tm_from
+  int tm_to; // trival move to level tm_to
 };
 
 struct FileMetaData {
@@ -261,6 +264,9 @@ struct FileMetaData {
       wdInfo.create_time = wd.create_time;
       wdInfo.delete_time = wd.delete_time;
       wdInfo.real_lifetime = wd.real_lifetime;
+      wdInfo.is_trivalmove = wd.is_trivalmove;
+      wdInfo.tm_from = wd.tm_from;
+      wdInfo.tm_to = wd.tm_to;
       TEST_SYNC_POINT_CALLBACK("FileMetaData::FileMetaData", this);
   }
 

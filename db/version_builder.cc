@@ -782,12 +782,22 @@ class VersionBuilder::Rep {
       uint64_t delete_time = del.second.wdInfo.delete_time;
       uint64_t real_lifetime = del.second.wdInfo.real_lifetime;
       int write_hint = static_cast<int>(del.second.wdInfo.write_hint);
+      bool is_trivalmove = del.second.wdInfo.is_trivalmove;
       std::string info = std::to_string(level) + "  "
       + std::to_string(num) + "  "
       + std::to_string(real_lifetime) + "  "
       + std::to_string(write_hint) + "  "
       + std::to_string(create_time) + "  "
-      + std::to_string(delete_time) + "\n";
+      + std::to_string(delete_time) + "  ";
+      if(is_trivalmove){
+        int from = del.second.wdInfo.tm_from;
+        int to = del.second.wdInfo.tm_to;
+        info += std::to_string(is_trivalmove) + "  "
+            + std::to_string(from) + "  "
+            + std::to_string(to) + "\n";
+      }else{
+        info += "\n";
+      }
       version_set_->wd_logger_->Append(Slice(info.data(),info.size()));
       version_set_->wd_logger_->Flush();
     }

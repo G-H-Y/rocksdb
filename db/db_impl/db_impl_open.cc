@@ -1904,7 +1904,7 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
     const auto& fs = impl->env_->GetFileSystem();
     s = WritableFileWriter::Create(fs, f_name, db_options, &file_writer,nullptr);
     if (s.ok()) {
-      std::string info = "level  number  real_lifetime  write_hint  create_time  delete_time\n";
+      std::string info = "level  number  real_lifetime  write_hint  create_time  delete_time  is_trivalmove  from  to\n";
       file_writer->Append(Slice(info.data(),info.size()),0);
       file_writer->Flush();
       impl->versions_->SetWDLogger(std::move(file_writer));
